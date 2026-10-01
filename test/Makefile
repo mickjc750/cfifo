@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -std=gnu11 -Wall -Wextra -Wpedantic -O0 -g
+CFLAGS ?= -std=gnu99 -Wall -Wextra -O0 -g
 
 TARGET := test_cfifo
 

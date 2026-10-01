@@ -58,7 +58,7 @@ Then:
 //	Suitable for use in ISR's where it is known that another ISR cannot interrupt access of the head or tail.
 	#define cfifo_write_char_isr(dst_ptr, src)												\
 	({																						\
-		bool retval = (((dst_ptr)->head+1) & ((dst_ptr)->capacity-1) != (dst_ptr)->tail);	\
+		bool retval = ((((dst_ptr)->head+1) & ((dst_ptr)->capacity-1)) != (dst_ptr)->tail);	\
 		if(retval)																			\
 		{																					\
 			(dst_ptr)->body[(dst_ptr)->head] = (src);										\
@@ -84,7 +84,7 @@ Then:
 //	The argument passed to dst_size will be the space from the head to the buffer end. This may be less than the total available space.
 //	readfunc() must write up to a maximum of dst_size bytes to *dst, and return the actual number of bytes written (>=0) or a negative value.
 //	The return value is that returned by readfunc()
-	int cfifo_write_using(cfifo_t *dst, int (*readfunc)(void *ctx, void *dst, int dst_size), void *readfunc_ctx);
+	int cfifo_write_using(cfifo_t *dst, int (*readfunc)(void *ctx, void *dst, int dst_size), void *ctx);
 
 //	Attempt to write a single char to the destination fifo.
 //	Returns true if a character was written. Faster than using cfifo_write()
@@ -100,7 +100,7 @@ Then:
 //	The argument passed to src_size will be the count from the tail to the buffer end. This may be less than the total count.
 //	writefunc() must accept up to a maximum of src_size bytes from *src, and return the actual number of bytes accepted (>=0) or a negative value.
 //	The return value is that returned by writefunc()
-	int cfifo_read_using(cfifo_t *src, int (*writefunc)(void *ctx, const void *src, int src_size), void *writefunc_ctx);
+	int cfifo_read_using(cfifo_t *src, int (*writefunc)(void *ctx, const void *src, int src_size), void *ctx);
 
 //	Attempt to read a single char from the source fifo.
 //	If dst is NULL, the char will be removed from the buffer and discarded.
@@ -206,12 +206,12 @@ int cfifo_write(cfifo_t *dst, const void *src, int src_size)
 	return write_size;
 }
 
-int cfifo_write_using(cfifo_t *dst, int (*readfunc)(void *ctx, void *dst, int dst_size), void *readfunc_ctx)
+int cfifo_write_using(cfifo_t *dst, int (*readfunc)(void *ctx, void *dst, int dst_size), void *ctx)
 {
 	int tail = CFIFO_ATOMIC_READ_INT(dst->tail);
 	int write_size = CIRC_SPACE_TO_END(dst->head, tail, dst->capacity);
 	int new_head;
-	int retval = readfunc(readfunc_ctx, dst->body ? &dst->body[dst->head]:NULL, write_size);
+	int retval = readfunc(ctx, dst->body ? &dst->body[dst->head]:NULL, write_size);
 	if(retval > 0)
 	{
 		new_head = (dst->head + retval) & (dst->capacity - 1);
@@ -258,12 +258,12 @@ int cfifo_read(cfifo_t *src, void *dst, int dst_size)
 	return read_size;
 }
 
-int cfifo_read_using(cfifo_t *src, int (*writefunc)(void *ctx, const void *src, int src_size), void *writefunc_ctx)
+int cfifo_read_using(cfifo_t *src, int (*writefunc)(void *ctx, const void *src, int src_size), void *ctx)
 {
 	int head = CFIFO_ATOMIC_READ_INT(src->head);
 	int read_size = CIRC_CNT_TO_END(head, src->tail, src->capacity);
 	int new_tail;
-	int retval = writefunc(writefunc_ctx, src->body ? &src->body[src->tail]:NULL, read_size);
+	int retval = writefunc(ctx, src->body ? &src->body[src->tail]:NULL, read_size);
 	if(retval > 0)
 	{
 		new_tail = (src->tail + retval) & (src->capacity - 1);
