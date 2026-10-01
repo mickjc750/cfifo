@@ -58,7 +58,7 @@ Then:
 //	Suitable for use in ISR's where it is known that another ISR cannot interrupt access of the head or tail.
 	#define cfifo_write_char_isr(dst_ptr, src)												\
 	({																						\
-		bool retval = (((dst_ptr)->head+1) & ((dst_ptr)->capacity-1) != (dst_ptr)->tail)	\
+		bool retval = (((dst_ptr)->head+1) & ((dst_ptr)->capacity-1) != (dst_ptr)->tail);	\
 		if(retval)																			\
 		{																					\
 			(dst_ptr)->body[(dst_ptr)->head] = (src);										\
@@ -100,7 +100,7 @@ Then:
 //	The argument passed to src_size will be the count from the tail to the buffer end. This may be less than the total count.
 //	writefunc() must accept up to a maximum of src_size bytes from *src, and return the actual number of bytes accepted (>=0) or a negative value.
 //	The return value is that returned by writefunc()
-	int cfifo_read_using(cfifo_t *dst, int (*writefunc)(void *ctx, const void *src, int src_size), void *writefunc_ctx);
+	int cfifo_read_using(cfifo_t *src, int (*writefunc)(void *ctx, const void *src, int src_size), void *writefunc_ctx);
 
 //	Attempt to read a single char from the source fifo.
 //	If dst is NULL, the char will be removed from the buffer and discarded.
@@ -191,7 +191,7 @@ Then:
 int cfifo_write(cfifo_t *dst, const void *src, int src_size)
 {
 	int tail = CFIFO_ATOMIC_READ_INT(dst->tail);
-	int write_size = MIN(CIRC_SPACE(dst->head, tail, dst->capacity), src_size);
+	int write_size = MIN(CIRC_SPACE(dst->head, tail, dst->capacity), src_size > 0 ? src_size:0);
 	int new_head;
 	if(write_size)
 	{
@@ -243,7 +243,7 @@ bool cfifo_write_char(cfifo_t *dst, char src)
 int cfifo_read(cfifo_t *src, void *dst, int dst_size)
 {
 	int head = CFIFO_ATOMIC_READ_INT(src->head);
-	int read_size = MIN(CIRC_CNT(head, src->tail, src->capacity), dst_size);
+	int read_size = MIN(CIRC_CNT(head, src->tail, src->capacity), dst_size > 0 ? dst_size:0);
 	int new_tail;
 	if(read_size)
 	{
